@@ -4,13 +4,12 @@ from enum import Enum
 
 import matplotlib.pyplot as plt
 import networkx as nx
-
-from Ahc import ComponentModel, Event, ConnectorTypes, Topology
-from Ahc import ComponentRegistry
-from Ahc import GenericMessagePayload, GenericMessageHeader, GenericMessage, EventTypes
-from Channels import P2PFIFOPerfectChannel
-from LinkLayers.GenericLinkLayer import LinkLayer
-from NetworkLayers.AllSeeingEyeNetworkLayer import AllSeingEyeNetworkLayer
+from Ahc.Ahc import ComponentModel, Event, ConnectorTypes, Topology
+from Ahc.Ahc import ComponentRegistry
+from Ahc.Ahc import GenericMessagePayload, GenericMessageHeader, GenericMessage, EventTypes
+from Ahc.Channels import P2PFIFOPerfectChannel
+from Ahc.LinkLayers.GenericLinkLayer import LinkLayer
+from Ahc.NetworkLayers.AllSeeingEyeNetworkLayer import AllSeingEyeNetworkLayer
 
 registry = ComponentRegistry()
 
@@ -128,6 +127,8 @@ def main():
   topo.start()
 
   plt.show()  # while (True): pass
+  while(True):
+    pass
 
 if __name__ == "__main__":
   main()

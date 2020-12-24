@@ -2,7 +2,7 @@ import random
 import time
 from enum import Enum
 
-from Ahc import ComponentModel, Event, GenericMessageHeader, GenericMessagePayload, GenericMessage, Topology, \
+from Ahc.Ahc import ComponentModel, Event, GenericMessageHeader, GenericMessagePayload, GenericMessage, Topology, \
   MessageDestinationIdentifiers, EventTypes
 
 class BroadcastingEventTypes(Enum):

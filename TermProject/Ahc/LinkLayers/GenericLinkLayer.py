@@ -1,6 +1,6 @@
 from enum import Enum
 
-from Ahc import ComponentModel, MessageDestinationIdentifiers, Event, GenericMessageHeader, GenericMessagePayload, \
+from Ahc.Ahc import ComponentModel, MessageDestinationIdentifiers, Event, GenericMessageHeader, GenericMessagePayload, \
   GenericMessage, EventTypes
 
 # define your own message types

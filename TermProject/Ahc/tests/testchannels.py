@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
 import networkx as nx
 
-from Ahc import ComponentModel, Event, Topology, ComponentRegistry, GenericMessage, GenericMessageHeader, EventTypes
-from Channels import P2PFIFOFairLossChannel
+from Ahc.Ahc import ComponentModel, Event, Topology, ComponentRegistry, GenericMessage, GenericMessageHeader, EventTypes
+from Ahc.Channels import P2PFIFOFairLossChannel
 
 registry = ComponentRegistry()
 
@@ -52,7 +52,8 @@ def main():
 
   topo.start()
   plt.show()
-  # while (True): pass   #plt.show() handles this
+  while (True):
+    pass   #plt.show() handles this
 
 if __name__ == "__main__":
   main()

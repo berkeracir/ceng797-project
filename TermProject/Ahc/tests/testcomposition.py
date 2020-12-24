@@ -1,5 +1,5 @@
-from Ahc import ComponentModel, Event, ConnectorTypes, Topology, EventTypes
-from Ahc import ComponentRegistry
+from Ahc.Ahc import ComponentModel, Event, ConnectorTypes, Topology, EventTypes
+from Ahc.Ahc import ComponentRegistry
 
 registry = ComponentRegistry()
 
@@ -85,7 +85,7 @@ class Node(ComponentModel):
     super().__init__(componentname, componentid)
 
 def main():
-  topo = Topology();
+  topo = Topology()
   topo.construct_single_node(Node, 0)
   topo.start()
 

@@ -3,11 +3,11 @@ import random
 import matplotlib.pyplot as plt
 import networkx as nx
 
-from Ahc import ComponentModel, Event, ConnectorTypes, Topology, EventTypes
-from Ahc import ComponentRegistry
-from Broadcasting.Broadcasting import ControlledFlooding
-from Channels import P2PFIFOFairLossChannel
-from LinkLayers.GenericLinkLayer import LinkLayer
+from Ahc.Ahc import ComponentModel, Event, ConnectorTypes, Topology, EventTypes
+from Ahc.Ahc import ComponentRegistry
+from Ahc.Broadcasting.Broadcasting import ControlledFlooding
+from Ahc.Channels import P2PFIFOFairLossChannel
+from Ahc.LinkLayers.GenericLinkLayer import LinkLayer
 
 registry = ComponentRegistry()
 
