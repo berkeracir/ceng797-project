@@ -8,13 +8,14 @@ class NodeChannel(Channel):
 
     def on_message_from_top(self, eventobj: Event):
         header = eventobj.eventcontent.header
-        if header.nexthop == MessageDestinationIdentifiers.LINKLAYERBROADCAST or header.nexthop in self.connectedNodeIds:
+        if header.nexthop == MessageDestinationIdentifiers.LINKLAYERBROADCAST \
+                or header.nexthop in self.connectedNodeIds or header.messageto in self.connectedNodeIds:
             myevent = Event(eventobj.eventsource, ChannelEventTypes.INCH, eventobj.eventcontent)
             self.channelqueue.put_nowait(myevent)
 
     def on_process_in_channel(self, eventobj: Event):
         if isinstance(eventobj.eventcontent, MSTMessage) \
-                and eventobj.eventcontent.header.messagetype == MSTMessageTypes.NEIGHBOR:
+                and eventobj.eventcontent.header.messagetype == MSTMessageTypes.NEIGHBOR_DISCOVERY:
             myeventcontent = copy.deepcopy(eventobj.eventcontent)
             myeventcontent.payload.messagepayload = self.weight
             myevent = Event(eventobj.eventsource, ChannelEventTypes.DLVR, myeventcontent)
