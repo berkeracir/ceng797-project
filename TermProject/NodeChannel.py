@@ -1,6 +1,6 @@
 import copy
 import time
-import sys
+from pympler import asizeof
 
 from Ahc.Ahc import Event, EventTypes
 from Ahc.Channels import Channel, ChannelEventTypes, MessageDestinationIdentifiers
@@ -28,7 +28,7 @@ class NodeChannel(Channel):
             if isinstance(eventobj.eventcontent, MSTMessage) \
                     and eventobj.eventcontent.header.messagetype == MSTMessageTypes.LOCAL_MST:
                 global totalWeight
-                totalWeight += sys.getsizeof(eventobj)
+                totalWeight += asizeof.asizeof(eventobj)
                 print(f"TOTAL WEIGHT = {totalWeight}")
                 time.sleep(1)
             myevent = Event(eventobj.eventsource, ChannelEventTypes.DLVR, eventobj.eventcontent)
