@@ -6,7 +6,8 @@ import random
 from Ahc.Ahc import Topology
 from NodeChannel import NodeChannel
 from Node import Node
-from Utility import drawGraph
+from Utility import drawGraph, getPathInMST
+
 
 class commands(Enum):   # TODO
     NEIGHBORS = "n"     # "neighbors"
@@ -20,10 +21,16 @@ class arguments(Enum):  # TODO
     ALL = "-a"          # "-all"
     # MST
     START = "-s"        # "-start"
+    RANDOM = "-r"       # "-random"
+    MANUAL = "-m"       # "-manuel"
     CONTINUE = "-c"     # "-continue"
     # SHOW
     NETWORK = "-n"      # "-network"
-    LMST = "-l"      # "-localmst"
+    LMST = "-l"         # "-localmst"
+    LMST_PATH = "-p"    # "-path"
+
+lastLocalMSTUpdatedNode = -1
+localMSTManualMode = False
 
 def helpUserCommand(cmd: commands):
     if cmd is commands.NEIGHBORS:
@@ -32,15 +39,21 @@ def helpUserCommand(cmd: commands):
               f"\t\"{commands.NEIGHBORS.value} nodeId\"\n"
               f"\t\"{commands.NEIGHBORS.value} {arguments.WEIGHTS.value} nodeId\"")
     elif cmd is commands.MST:
-        print(f"Start MinimumSpanningTree:\n"
-              f"\t\"{commands.MST.value} {arguments.START.value} nodeId\"")
-        print(f"Continue MinimumSpanningTree:\n"
+        print(f"Start Minimum Spanning Tree Algorithm:\n"
+              f"\t\"{commands.MST.value} {arguments.START.value} nodeId\"\n"
+              f"\t\"{commands.MST.value} {arguments.START.value} {arguments.RANDOM.value}\"\n"
+              f"\t\"{commands.MST.value} {arguments.START.value} {arguments.MANUAL.value} nodeId\"\n"
+              f"\t\"{commands.MST.value} {arguments.START.value} {arguments.MANUAL.value} {arguments.RANDOM.value}\"")
+        print(f"Continue Minimum Spanning Tree Algorithm Manually:\n"
+              f"\t\"{commands.MST.value} {arguments.CONTINUE.value} destinationNodeId\"\n"
               f"\t\"{commands.MST.value} {arguments.CONTINUE.value} sourceNodeId destinationNodeId\"")
     elif cmd is commands.SHOW:
         print(f"Show Network Topology:\n"
               f"\t\"{commands.SHOW.value} {arguments.NETWORK.value}\"")
         print(f"Show Local MinimumSpanningTree:\n"
               f"\t\"{commands.SHOW.value} {arguments.LMST.value}\" nodeId")
+        print(f"Show Path in Local MinimumSpanningTree:\n"
+              f"\t\"{commands.SHOW.value} {arguments.LMST_PATH.value}\" sourceNodeId destinationNodeId")
     elif cmd is commands.HELP:
         helpUserCommand(commands.NEIGHBORS)
         helpUserCommand(commands.MST)
@@ -78,40 +91,85 @@ def neighborsCommand(args: arguments, topology: Topology):
         helpUserCommand(commands.NEIGHBORS)
 
 def mstCommand(args: arguments, topology: Topology):
+    global lastLocalMSTUpdatedNode, localMSTManualMode
+
     mstStart = arguments.START.value in args
     mstContinue = arguments.CONTINUE.value in args
 
     if mstStart and not mstContinue:
         args.remove(arguments.START.value)
+        mstManual = arguments.MANUAL.value in args
+        mstRandom = arguments.RANDOM.value in args
+        if mstManual:
+            args.remove(arguments.MANUAL.value)
+            localMSTManualMode = True
+        if mstRandom:
+            args.remove(arguments.RANDOM.value)
 
-        if len(args) == 1:
-            try:
-                nodeId = int(args[0])
-                topology.nodes.get(nodeId).MSTComponent.startMST()
-            except KeyError:
-                print(f"Node {nodeId} does not exist in the topology.")
-        else:
-            helpUserCommand(commands.MST)
-    elif mstContinue and not mstStart:
-        args.remove(arguments.CONTINUE.value)
-
-        if len(args) == 2:
-            try:
-                sourceNodeId = int(args[0])
-                sourceNode = topology.nodes.get(sourceNodeId)
-            except KeyError:
-                print(f"Node {sourceNodeId} does not exist in the topology.")
-            try:
-                destinationNodeId = int(args[1])
-            except KeyError:
-                print(f"Node {sourceNodeId} does not exist in the topology.")
-
-            if sourceNode.MSTComponent.localMST is not None:
-                sourceNode.MSTComponent.sendLocalMSTUpdate(destinationNodeId)
+            if len(args) == 0:
+                try:
+                    randomNodeId = random.randint(0, len(topology.nodes) - 1)
+                    randomNode = topology.nodes.get(randomNodeId)
+                except KeyError:
+                    print(f"Node {randomNodeId} does not exist in the topology.")
+                randomNode.MSTComponent.startMST(localMSTManualMode)
+                lastLocalMSTUpdatedNode = randomNodeId
             else:
-                print(f"Node {sourceNodeId} does not have LocalMinimumSpanningTree.")
+                helpUserCommand(commands.MST)
         else:
-            helpUserCommand(commands.MST)
+            if len(args) == 1:
+                try:
+                    nodeId = int(args[0])
+                    node = topology.nodes.get(nodeId)
+                except KeyError:
+                    print(f"Node {nodeId} does not exist in the topology.")
+                node.MSTComponent.startMST(localMSTManualMode)
+                lastLocalMSTUpdatedNode = nodeId
+            else:
+                helpUserCommand(commands.MST)
+    elif mstContinue and not mstStart:
+        if localMSTManualMode:
+            args.remove(arguments.CONTINUE.value)
+
+            if len(args) == 1:
+                if lastLocalMSTUpdatedNode != -1:
+                    sourceNodeId = lastLocalMSTUpdatedNode
+                    sourceNode = topology.nodes.get(sourceNodeId)
+                    try:
+                        destinationNodeId = int(args[0])
+                    except KeyError:
+                        print(f"Node {destinationNodeId} does not exist in the topology.")
+
+                    if sourceNode.MSTComponent.localMST is not None:
+                        sourceNode.MSTComponent.sendLocalMSTUpdate(destinationNodeId, localMSTManualMode)
+                        lastLocalMSTUpdatedNode = destinationNodeId
+                    else:
+                        print(f"Node {sourceNodeId} does not have LocalMinimumSpanningTree.")
+                else:
+                    print(f"Minimum Spanning Tree algorithm must be started manually before continuing.")
+            elif len(args) == 2:
+                try:
+                    sourceNodeId = int(args[0])
+                    sourceNode = topology.nodes.get(sourceNodeId)
+                except KeyError:
+                    print(f"Node {sourceNodeId} does not exist in the topology.")
+                try:
+                    destinationNodeId = int(args[1])
+                except KeyError:
+                    print(f"Node {destinationNodeId} does not exist in the topology.")
+
+                if sourceNode.MSTComponent.localMST is not None:
+                    sourceNode.MSTComponent.sendLocalMSTUpdate(destinationNodeId, localMSTManualMode)
+                    lastLocalMSTUpdatedNode = destinationNodeId
+                else:
+                    print(f"Node {sourceNodeId} does not have LocalMinimumSpanningTree.")
+            else:
+                helpUserCommand(commands.MST)
+        else:
+            if lastLocalMSTUpdatedNode == -1:
+                print(f"Minimum Spanning Tree algorithm did not started.")
+            else:
+                print(f"Minimum Spanning Tree algorithm did not started in manual mode.")
     else:
         helpUserCommand(commands.MST)
 
@@ -120,13 +178,35 @@ def showCommand(args: arguments, topology: Topology):
         drawGraph(topology.G, isTopologyGraph=True)
     elif arguments.LMST.value in args:
         args.remove(arguments.LMST.value)
-        try:
-            nodeId = int(args[0])
-            node = topology.nodes[nodeId]
+
+        if len(args) == 1:
+            try:
+                nodeId = int(args[0])
+                node = topology.nodes[nodeId]
+            except KeyError:
+                print(f"Node {nodeId} does not exist in the topology.")
             localMST = node.MSTComponent.localMST
-            drawGraph(localMST)
-        except KeyError:
-            print(f"Node {nodeId} does not exist in the topology.")
+            neighbors = node.MSTComponent.neighbors
+            drawGraph(localMST, currentNode=nodeId, neighbors=neighbors, showTopology=True)
+        else:
+            helpUserCommand(commands.SHOW)
+    elif arguments.LMST_PATH.value in args:
+        args.remove(arguments.LMST_PATH.value)
+        if len(args) == 2:
+            try:
+                sourceNodeId = int(args[0])
+                sourceNode = topology.nodes[sourceNodeId]
+            except KeyError:
+                print(f"Node {sourceNodeId} does not exist in the topology.")
+            try:
+                destinationNodeId = int(args[0])
+            except KeyError:
+                print(f"Node {destinationNodeId} does not exist in the topology.")
+            localMST = sourceNode.MSTComponent.localMST
+            drawGraph(localMST, showTopology=True)
+            print(f"Path from Node {sourceNodeId} to Node {destinationNodeId}: {getPathInMST(localMST, sourceNodeId, destinationNodeId)}")
+        else:
+            helpUserCommand(commands.SHOW)
     else:
         helpUserCommand(commands.SHOW)
 
@@ -147,14 +227,14 @@ def processUserCommand(userInput: str, topology: Topology):
         helpUserCommand(commands.HELP)
     else:
         argsToString = " ".join(args)
-        print(f"Unknown command: {cmd} {argsToString}")
-
+        print(f"Unknown input: \'{userInput}\'")
 
 def main():
-    G: nx.Graph= nx.random_geometric_graph(5, 0.5, seed=3)      # Remove seed
-    #G: nx.Graph = nx.random_geometric_graph(10, 0.5, seed=5)
+    # G: nx.Graph= nx.random_geometric_graph(5, 0.5, seed=3)
+    # G: nx.Graph = nx.random_geometric_graph(14, 0.4, seed=1)
+    G: nx.Graph = nx.random_geometric_graph(15, 0.4, seed=3)
     for (u, v) in G.edges:
-        G.get_edge_data(u, v)['weight'] = u + v + u * v          # random.randint(1, len(G.nodes)) # TODO
+        G.get_edge_data(u, v)['weight'] = random.randint(1, len(G.nodes))   # u + v + u * v # TODO
 
     topo = Topology()
     topo.construct_from_graph(G, Node, NodeChannel)
@@ -162,9 +242,10 @@ def main():
 
     drawGraph(G, isTopologyGraph=True)
 
-    while (True):
+    while True:
         userInput = input("\nUser Command:\n")
         processUserCommand(userInput, topo)
+
 
 if __name__ == "__main__":
     main()

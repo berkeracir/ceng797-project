@@ -4,7 +4,7 @@ import networkx as nx
 
 from Ahc.Ahc import ComponentModel, Event, EventTypes, GenericMessage, GenericMessageHeader, GenericMessagePayload
 from Ahc.Channels import MessageDestinationIdentifiers
-from Utility import drawGraph, getPathInMST, getMaximumWeightedEdge
+from Utility import drawGraph, getPathInMST, getMaximumWeightedEdge, selectDeactivatedNode
 
 
 class LocalMinimumSpanningTreeUpdate:
@@ -34,11 +34,12 @@ class NEIGHBORMessageHeader(GenericMessageHeader):
 
 
 class LOCALMSTMessagePayload(GenericMessagePayload):
-    def __init__(self, localMST: nx.Graph):
+    def __init__(self, localMST: nx.Graph, manualMode=False, nextActivationNode=-1):
         super().__init__(localMST)
+        self.manualMode = manualMode
+        self.nextActivationNode = nextActivationNode
 
-
-class LOCALMSTMessageHeader(GenericMessageHeader):  # TODO
+class LOCALMSTMessageHeader(GenericMessageHeader):
     def __init__(self, messagefrom, messageto):
         if messageto == -1:
             super().__init__(MSTMessageTypes.LOCAL_MST, messagefrom, messageto,
@@ -48,11 +49,13 @@ class LOCALMSTMessageHeader(GenericMessageHeader):  # TODO
 
 
 class MSTMessage(GenericMessage):
-    def __init__(self, messagefrom, messageto, messagetype: MSTMessageTypes, messagepayload=None):
+    def __init__(self, messagefrom, messageto, messagetype: MSTMessageTypes, messagepayload=None, manualMode=False,
+                 nextActivationNode=-1):
         if messagetype == MSTMessageTypes.NEIGHBOR_DISCOVERY:
             super().__init__(NEIGHBORMessageHeader(messagefrom, messageto), NEIGHBORMessagePayload())
         elif messagetype == MSTMessageTypes.LOCAL_MST:
-            super().__init__(LOCALMSTMessageHeader(messagefrom, messageto), LOCALMSTMessagePayload(messagepayload))
+            super().__init__(LOCALMSTMessageHeader(messagefrom, messageto),
+                             LOCALMSTMessagePayload(messagepayload, manualMode, nextActivationNode))
 
 
 class MSTComponent(ComponentModel):
@@ -92,14 +95,20 @@ class MSTComponent(ComponentModel):
 
     def on_local_minimum_spanning_tree(self, eventobj: Event):
         content = eventobj.eventcontent
-        payload = content.payload
+
+        messagefrom = content.header.messagefrom
+        receivedMSTUpdate: nx.Graph = content.payload.messagepayload
+        manualMode = content.payload.manualMode
+        nextActivationNode = content.payload.nextActivationNode
 
         currentNode = self.componentinstancenumber
-        receivedMSTUpdate: nx.Graph = payload.messagepayload
+        decideNextActivation = False
 
         if receivedMSTUpdate is None:
             S: nx.Graph = nx.Graph()
             S.add_node(self.componentinstancenumber)
+            S.nodes[currentNode]['activated'] = True
+            decideNextActivation = True
 
             for (node, weight) in self.neighbors.items():
                 S.add_node(node)
@@ -109,25 +118,67 @@ class MSTComponent(ComponentModel):
         else:
             S: nx.Graph = deepcopy(receivedMSTUpdate)
 
-            for (node, weight) in self.neighbors.items():
-                if not S.has_node(node):
-                    S.add_node(node)
-                    S.nodes[node]['activated'] = False
-                    S.add_edge(currentNode, node)
-                    S.edges[currentNode, node]['weight'] = weight
+            if currentNode in S.nodes:
+                if S.nodes[currentNode]['activated']:
+                    pass
                 else:
-                    if not S.has_edge(currentNode, node):
-                        path = getPathInMST(S, currentNode, node)
-                        maximumWeight, node1, node2 = getMaximumWeightedEdge(S, path)
-
-                        if weight < maximumWeight:
-                            S.remove_edge(node1, node2)
+                    for (node, weight) in self.neighbors.items():
+                        if not S.has_node(node):
+                            S.add_node(node)
+                            S.nodes[node]['activated'] = False
                             S.add_edge(currentNode, node)
-                            S.get_edge_data(currentNode, node)['weight'] = weight
+                            S.edges[currentNode, node]['weight'] = weight
+                        else:
+                            if not S.has_edge(currentNode, node):
+                                path = getPathInMST(S, currentNode, node)
+                                maximumWeight, node1, node2 = getMaximumWeightedEdge(S, path)
+                                if weight < maximumWeight:
+                                    S.remove_edge(node1, node2)
+                                    S.add_edge(currentNode, node)
+                                    S.get_edge_data(currentNode, node)['weight'] = weight
 
-        S.nodes[currentNode]['activated'] = True
+                    S.nodes[currentNode]['activated'] = True
+                    decideNextActivation = True
+            else:
+                raise NotImplementedError
+
         self.localMST = S
-        drawGraph(self.localMST, currentNode, self.neighbors)
+
+        if not manualMode:
+            if decideNextActivation:
+                drawGraph(S, currentNode, self.neighbors, showTopology=False)
+
+                nextActivation = selectDeactivatedNode(S, currentNode, self.neighbors)
+                if nextActivation in self.neighbors:
+                    localMSTEventContent = MSTMessage(self.componentinstancenumber, nextActivation,
+                                                      MSTMessageTypes.LOCAL_MST, messagepayload=self.localMST)
+                    localMSTEvent = Event(self, EventTypes.MFRT, localMSTEventContent)
+                    self.send_down(localMSTEvent)
+                    nextActivation = -1
+
+                for node in S.neighbors(currentNode):
+                    if S.nodes[node]['activated']:
+                        localMSTEventContent = MSTMessage(self.componentinstancenumber, node, MSTMessageTypes.LOCAL_MST,
+                                                          messagepayload=self.localMST, nextActivationNode=nextActivation)
+                        localMSTEvent = Event(self, EventTypes.MFRT, localMSTEventContent)
+                        self.send_down(localMSTEvent)
+            else:
+                if nextActivationNode in self.neighbors:
+                    localMSTEventContent = MSTMessage(self.componentinstancenumber, nextActivationNode,
+                                                      MSTMessageTypes.LOCAL_MST, messagepayload=self.localMST)
+                    localMSTEvent = Event(self, EventTypes.MFRT, localMSTEventContent)
+                    self.send_down(localMSTEvent)
+                    nextActivationNode = -1
+
+                for node in S.neighbors(currentNode):
+                    if S.nodes[node]['activated'] and node is not messagefrom:
+                        localMSTEventContent = MSTMessage(self.componentinstancenumber, node, MSTMessageTypes.LOCAL_MST,
+                                                          messagepayload=self.localMST,
+                                                          nextActivationNode=nextActivationNode)
+                        localMSTEvent = Event(self, EventTypes.MFRT, localMSTEventContent)
+                        self.send_down(localMSTEvent)
+        else:
+            drawGraph(S, currentNode, self.neighbors, showTopology=False)
 
     def __init__(self, componentid):
         componentname = "MSTComponent"
@@ -144,14 +195,14 @@ class MSTComponent(ComponentModel):
         else:
             return [(k, v) for k, v in self.neighbors.items()]
 
-    def startMST(self):
+    def startMST(self, manualMode=False):
         localMSTEventContent = MSTMessage(self.componentinstancenumber, self.componentinstancenumber,
-                                          MSTMessageTypes.LOCAL_MST)
+                                          MSTMessageTypes.LOCAL_MST, manualMode=manualMode)
         localMSTEvent = Event(self, MSTEventTypes.LMST, localMSTEventContent)
         self.send_self(localMSTEvent)
 
-    def sendLocalMSTUpdate(self, nodeId: int):
+    def sendLocalMSTUpdate(self, nodeId: int, manualMode=False):
         localMSTEventContent = MSTMessage(self.componentinstancenumber, nodeId, MSTMessageTypes.LOCAL_MST,
-                                          self.localMST)
+                                          self.localMST, manualMode=manualMode)
         localMSTEvent = Event(self, EventTypes.MFRT, localMSTEventContent)
         self.send_down(localMSTEvent)
