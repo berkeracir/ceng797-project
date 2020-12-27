@@ -2,6 +2,7 @@ from enum import Enum
 import matplotlib.pyplot as plt
 import networkx as nx
 import random
+import time
 
 from Ahc.Ahc import Topology
 from NodeChannel import NodeChannel
@@ -77,6 +78,10 @@ def neighborsCommand(args: arguments, topology: Topology):
                 nodes.append(node)
             except KeyError:
                 print(f"Node {nodeId} does not exist in the topology.")
+                return
+            except ValueError:
+                print(f"\'{args[0]}\' is not integer.")
+                return
 
         for node in nodes:
             nodeId = node.componentinstancenumber
@@ -86,7 +91,6 @@ def neighborsCommand(args: arguments, topology: Topology):
             else:
                 neighborsString = ", ".join(map(lambda n: f"{n}", neighbors))
             print(f"Neighbors of Node {nodeId}: {neighborsString}")
-
     else:
         helpUserCommand(commands.NEIGHBORS)
 
@@ -112,6 +116,7 @@ def mstCommand(args: arguments, topology: Topology):
                     randomNode = topology.nodes.get(randomNodeId)
                 except KeyError:
                     print(f"Node {randomNodeId} does not exist in the topology.")
+                    return
                 randomNode.MSTComponent.startMST(localMSTManualMode)
                 lastLocalMSTUpdatedNode = randomNodeId
             else:
@@ -123,6 +128,10 @@ def mstCommand(args: arguments, topology: Topology):
                     node = topology.nodes.get(nodeId)
                 except KeyError:
                     print(f"Node {nodeId} does not exist in the topology.")
+                    return
+                except ValueError:
+                    print(f"\'{args[0]}\' is not integer.")
+                    return
                 node.MSTComponent.startMST(localMSTManualMode)
                 lastLocalMSTUpdatedNode = nodeId
             else:
@@ -139,10 +148,18 @@ def mstCommand(args: arguments, topology: Topology):
                         destinationNodeId = int(args[0])
                     except KeyError:
                         print(f"Node {destinationNodeId} does not exist in the topology.")
+                        return
+                    except ValueError:
+                        print(f"\'{args[0]}\' is not integer.")
+                        return
 
                     if sourceNode.MSTComponent.localMST is not None:
-                        sourceNode.MSTComponent.sendLocalMSTUpdate(destinationNodeId, localMSTManualMode)
-                        lastLocalMSTUpdatedNode = destinationNodeId
+                        if destinationNodeId in sourceNode.MSTComponent.localMST.nodes:
+                            sourceNode.MSTComponent.sendLocalMSTUpdateManually(destinationNodeId)
+                            lastLocalMSTUpdatedNode = destinationNodeId
+                        else:
+                            print(f"Local Minimum Spanning Tree of Source Node {sourceNodeId} does not contain "
+                                  f"Destination Node {destinationNodeId}.")
                     else:
                         print(f"Node {sourceNodeId} does not have LocalMinimumSpanningTree.")
                 else:
@@ -153,14 +170,26 @@ def mstCommand(args: arguments, topology: Topology):
                     sourceNode = topology.nodes.get(sourceNodeId)
                 except KeyError:
                     print(f"Node {sourceNodeId} does not exist in the topology.")
+                    return
+                except ValueError:
+                    print(f"\'{args[0]}\' is not integer.")
+                    return
                 try:
                     destinationNodeId = int(args[1])
                 except KeyError:
                     print(f"Node {destinationNodeId} does not exist in the topology.")
+                    return
+                except ValueError:
+                    print(f"\'{args[1]}\' is not integer.")
+                    return
 
                 if sourceNode.MSTComponent.localMST is not None:
-                    sourceNode.MSTComponent.sendLocalMSTUpdate(destinationNodeId, localMSTManualMode)
-                    lastLocalMSTUpdatedNode = destinationNodeId
+                    if destinationNodeId in sourceNode.MSTComponent.localMST.nodes:
+                        sourceNode.MSTComponent.sendLocalMSTUpdateManually(destinationNodeId)
+                        lastLocalMSTUpdatedNode = destinationNodeId
+                    else:
+                        print(f"Local Minimum Spanning Tree of Source Node {sourceNodeId} does not contain "
+                              f"Destination Node {destinationNodeId}.")
                 else:
                     print(f"Node {sourceNodeId} does not have LocalMinimumSpanningTree.")
             else:
@@ -185,9 +214,13 @@ def showCommand(args: arguments, topology: Topology):
                 node = topology.nodes[nodeId]
             except KeyError:
                 print(f"Node {nodeId} does not exist in the topology.")
+                return
+            except ValueError:
+                print(f"\'{args[0]}\' is not integer.")
+                return
             localMST = node.MSTComponent.localMST
             neighbors = node.MSTComponent.neighbors
-            drawGraph(localMST, currentNode=nodeId, neighbors=neighbors, showTopology=True)
+            drawGraph(localMST, currentNode=nodeId, neighbors={}, showTopology=False)
         else:
             helpUserCommand(commands.SHOW)
     elif arguments.LMST_PATH.value in args:
@@ -198,13 +231,23 @@ def showCommand(args: arguments, topology: Topology):
                 sourceNode = topology.nodes[sourceNodeId]
             except KeyError:
                 print(f"Node {sourceNodeId} does not exist in the topology.")
+                return
+            except ValueError:
+                print(f"\'{args[0]}\' is not integer.")
+                return
             try:
-                destinationNodeId = int(args[0])
+                destinationNodeId = int(args[1])
+                destinationNode = topology.nodes[sourceNodeId]
             except KeyError:
                 print(f"Node {destinationNodeId} does not exist in the topology.")
+                return
+            except ValueError:
+                print(f"\'{args[1]}\' is not integer.")
+                return
             localMST = sourceNode.MSTComponent.localMST
-            drawGraph(localMST, showTopology=True)
-            print(f"Path from Node {sourceNodeId} to Node {destinationNodeId}: {getPathInMST(localMST, sourceNodeId, destinationNodeId)}")
+            drawGraph(localMST, showTopology=False)
+            print(f"Path from Node {sourceNodeId} to Node {destinationNodeId}: "
+                  f"{getPathInMST(localMST, sourceNodeId, destinationNodeId)}")
         else:
             helpUserCommand(commands.SHOW)
     else:
@@ -231,10 +274,10 @@ def processUserCommand(userInput: str, topology: Topology):
 
 def main():
     # G: nx.Graph= nx.random_geometric_graph(5, 0.5, seed=3)
-    # G: nx.Graph = nx.random_geometric_graph(14, 0.4, seed=1)
-    G: nx.Graph = nx.random_geometric_graph(15, 0.4, seed=3)
+    G: nx.Graph = nx.random_geometric_graph(14, 0.4, seed=1)
+    # G: nx.Graph = nx.random_geometric_graph(15, 0.4, seed=3)
     for (u, v) in G.edges:
-        G.get_edge_data(u, v)['weight'] = random.randint(1, len(G.nodes))   # u + v + u * v # TODO
+        G.get_edge_data(u, v)['weight'] = u + v + u * v # random.randint(1, len(G.nodes))   # u + v + u * v # TODO
 
     topo = Topology()
     topo.construct_from_graph(G, Node, NodeChannel)
@@ -245,7 +288,7 @@ def main():
     while True:
         userInput = input("\nUser Command:\n")
         processUserCommand(userInput, topo)
-
+        time.sleep(1)
 
 if __name__ == "__main__":
     main()

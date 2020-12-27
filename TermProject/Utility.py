@@ -10,7 +10,8 @@ deactivatedNodeColor = '#ff8080'
 activatedCurrentNodeColor = '#008000'
 deactivatedCurrentNodeColor = '#800000'
 
-def drawGraph(G: nx.Graph, currentNode=-1, neighbors={}, isTopologyGraph=False, showTopology=False, saveFigures=True):
+
+def drawGraph(G: nx.Graph, currentNode=-1, neighbors={}, isTopologyGraph=False, showTopology=False, saveFigures=False):
     global topologyGraph
     global saveIndex, saveName
     global activatedNodeColor, deactivatedNodeColor, activatedCurrentNodeColor, deactivatedCurrentNodeColor
@@ -66,7 +67,7 @@ def drawGraph(G: nx.Graph, currentNode=-1, neighbors={}, isTopologyGraph=False, 
                         if not G.has_edge(currentNode, n):
                             edgesToDraw.append((currentNode, n))
                             weightsToDraw[(currentNode, n)] = w
-                    nx.draw_networkx_edges(G, pos, edgelist=edgesToDraw, style='dotted')
+                    # nx.draw_networkx_edges(G, pos, edgelist=edgesToDraw, style='dotted', alpha=1)
                     nx.draw_networkx_edge_labels(G, pos, edge_labels=weightsToDraw)
 
         plt.draw()
@@ -76,6 +77,7 @@ def drawGraph(G: nx.Graph, currentNode=-1, neighbors={}, isTopologyGraph=False, 
         plt.show()
     else:
         print("Graph does not exist!")
+
 
 def getPathInMST(S: nx.Graph, s: int, d: int, prevNode=-1):
     unvisitedNeighbors = list(S.neighbors(s))
@@ -91,6 +93,7 @@ def getPathInMST(S: nx.Graph, s: int, d: int, prevNode=-1):
                 return [s] + path
         return [s]
 
+
 def getMaximumWeightedEdge(S: nx.Graph, path: list):
     weight = float('-inf')
 
@@ -103,6 +106,7 @@ def getMaximumWeightedEdge(S: nx.Graph, path: list):
         i += 1
     return weight, nodes[0], nodes[1]
 
+
 def getPathCost(S: nx.Graph, path: list):
     weight = 0
     i = 0
@@ -110,6 +114,7 @@ def getPathCost(S: nx.Graph, path: list):
         weight += S.get_edge_data(path[i], path[i + 1])['weight']
         i += 1
     return weight
+
 
 def selectDeactivatedNode(S: nx.Graph, currentNode: int, neighbors):
     deactivatedNodes = []
@@ -131,3 +136,24 @@ def selectDeactivatedNode(S: nx.Graph, currentNode: int, neighbors):
         return deactivatedNodes[0][0]
     else:
         return -1
+
+
+def optimizeInsertions(I: dict):
+    insertions = dict(I)
+    keys = list(I.keys())
+    for u, v in keys:
+        w = insertions[u, v]
+        if u > v:
+            insertions.pop((u, v))
+            insertions[v, u] = w
+    return insertions
+
+
+def optimizeDeletions(D: set):
+    deletions = set(D)
+    l = list(D)
+    for u, v in l:
+        if u > v:
+            deletions.remove((u, v))
+            deletions.add((v, u))
+    return deletions

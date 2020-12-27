@@ -1,8 +1,12 @@
 import copy
+import time
+import sys
 
 from Ahc.Ahc import Event, EventTypes
 from Ahc.Channels import Channel, ChannelEventTypes, MessageDestinationIdentifiers
 from MinimumSpanningTree import MSTMessage, MSTMessageTypes
+
+totalWeight = 0
 
 class NodeChannel(Channel):
 
@@ -21,6 +25,12 @@ class NodeChannel(Channel):
             myevent = Event(eventobj.eventsource, ChannelEventTypes.DLVR, myeventcontent)
             self.outputqueue.put_nowait(myevent)
         else:
+            if isinstance(eventobj.eventcontent, MSTMessage) \
+                    and eventobj.eventcontent.header.messagetype == MSTMessageTypes.LOCAL_MST:
+                global totalWeight
+                totalWeight += sys.getsizeof(eventobj)
+                print(f"TOTAL WEIGHT = {totalWeight}")
+                time.sleep(1)
             myevent = Event(eventobj.eventsource, ChannelEventTypes.DLVR, eventobj.eventcontent)
             self.outputqueue.put_nowait(myevent)
 
