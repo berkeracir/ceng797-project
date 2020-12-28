@@ -269,7 +269,6 @@ def processUserCommand(userInput: str, topology: Topology):
     elif cmd == commands.HELP.value:
         helpUserCommand(commands.HELP)
     else:
-        argsToString = " ".join(args)
         print(f"Unknown input: \'{userInput}\'")
 
 def main():
@@ -288,7 +287,6 @@ def main():
     while True:
         userInput = input("\nUser Command:\n")
         processUserCommand(userInput, topo)
-        time.sleep(1)
 
 if __name__ == "__main__":
     main()

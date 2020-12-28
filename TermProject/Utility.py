@@ -67,7 +67,8 @@ def drawGraph(G: nx.Graph, currentNode=-1, neighbors={}, isTopologyGraph=False, 
                         if not G.has_edge(currentNode, n):
                             edgesToDraw.append((currentNode, n))
                             weightsToDraw[(currentNode, n)] = w
-                    # nx.draw_networkx_edges(G, pos, edgelist=edgesToDraw, style='dotted', alpha=1)
+                    if not showTopology:
+                        nx.draw_networkx_edges(G, pos, edgelist=edgesToDraw, style='dotted')
                     nx.draw_networkx_edge_labels(G, pos, edge_labels=weightsToDraw)
 
         plt.draw()
