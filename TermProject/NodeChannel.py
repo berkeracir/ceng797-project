@@ -31,7 +31,7 @@ class NodeChannel(Channel):
         else:
             if isinstance(eventobj.eventcontent, MSTMessage) \
                     and eventobj.eventcontent.header.messagetype == MSTMessageTypes.LOCAL_MST:
-                time.sleep(1)
+                time.sleep(0.25)
             myevent = Event(eventobj.eventsource, ChannelEventTypes.DLVR, eventobj.eventcontent)
             self.outputqueue.put_nowait(myevent)
 

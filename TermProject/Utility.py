@@ -1,6 +1,9 @@
 import networkx as nx
 import matplotlib.pyplot as plt
 
+from sys import setrecursionlimit
+setrecursionlimit(5000)
+
 topologyGraph = None
 saveIndex = 0
 saveName = "Figures/figure_X.png"
@@ -126,11 +129,11 @@ def selectDeactivatedNode(S: nx.Graph, currentNode: int, neighbors):
             hopCount = len(path) - 1
             deactivatedNodes.append((node, pathCost, hopCount))
 
-            if node in neighbors:
-                path = [currentNode, node]
-                pathCost = neighbors[node]
-                hopCount = 1
-                deactivatedNodes.append((node, pathCost, hopCount))
+            # if node in neighbors:
+            #     path = [currentNode, node]
+            #     pathCost = neighbors[node]
+            #     hopCount = 1
+            #     deactivatedNodes.append((node, pathCost, hopCount))
     deactivatedNodes.sort(key=lambda r: (r[1], r[2]))
 
     if len(deactivatedNodes) > 0:

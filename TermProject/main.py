@@ -273,10 +273,13 @@ def processUserCommand(userInput: str, topology: Topology):
 
 def main():
     # G: nx.Graph= nx.random_geometric_graph(5, 0.5, seed=3)
-    G: nx.Graph = nx.random_geometric_graph(14, 0.4, seed=1)
+    # G: nx.Graph = nx.random_geometric_graph(14, 0.4, seed=1)
     # G: nx.Graph = nx.random_geometric_graph(15, 0.4, seed=3)
+    # G: nx.Graph = nx.random_geometric_graph(20, 0.4, seed=3)
+    # G: nx.Graph = nx.random_geometric_graph(10, 0.5, seed=3)
+    G: nx.Graph = nx.random_geometric_graph(30, 0.35, seed=3)
     for (u, v) in G.edges:
-        G.get_edge_data(u, v)['weight'] = u + v + u * v # random.randint(1, len(G.nodes))   # u + v + u * v # TODO
+        G.get_edge_data(u, v)['weight'] = random.randint(1, len(G.nodes))   # u + v + u * v # TODO
 
     topo = Topology()
     topo.construct_from_graph(G, Node, NodeChannel)
