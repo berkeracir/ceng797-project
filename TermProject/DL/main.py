@@ -45,7 +45,7 @@ def mainMultipleModels(aggregate = False):
             _, accuracy = model.evaluate(features, labels, verbose=0)
             if accuracy > N[n]['bestAccuracy']:
                 N[n]['bestAccuracy'] = accuracy
-                N[n]['bestModel'] = deepcopy(model)
+                N[n]['bestModel'] = model
                 N[n]['epoch'] = totalEpoch + E
             if len(aggregatedWeights) > 0:
                 weight = model.get_weights()
@@ -179,22 +179,22 @@ def mainMultipleBestModels(aggregate = False):
 if __name__ == "__main__":
     # mainOnlyOneModel()
     ########
-    # withAgg = []
-    # withoutAgg = []
-    # for i in range(5):
-    #     withoutAgg.append(mainMultipleModels(aggregate=False))
-    #     withAgg.append(mainMultipleModels(aggregate=True))
-    #
-    # withoutAggTotal = 0
-    # for i in withoutAgg:
-    #     withoutAggTotal += i
-    # withoutAggAvr = withoutAggTotal / len(withoutAgg)
-    #
-    # withAggTotal = 0
-    # for i in withAgg:
-    #     withAggTotal += i
-    # withAggAvr = withAggTotal / len(withAgg)
-    #
-    # print(f"Without Agg. %.2f vs With Agg. %.2f" % (withoutAggAvr, withAggAvr))
+    withAgg = []
+    withoutAgg = []
+    for i in range(10):
+        withoutAgg.append(mainMultipleModels(aggregate=False))
+        withAgg.append(mainMultipleModels(aggregate=True))
+
+    withoutAggTotal = 0
+    for i in withoutAgg:
+        withoutAggTotal += i
+    withoutAggAvr = withoutAggTotal / len(withoutAgg)
+
+    withAggTotal = 0
+    for i in withAgg:
+        withAggTotal += i
+    withAggAvr = withAggTotal / len(withAgg)
+
+    print(f"Without Agg. %.2f vs With Agg. %.2f" % (withoutAggAvr, withAggAvr))
     ########
-    mainMultipleBestModels(True)
+    # mainMultipleBestModels(True)

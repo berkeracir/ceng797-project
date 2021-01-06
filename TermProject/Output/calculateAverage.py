@@ -13,4 +13,4 @@ for folderName in folderNames:
             for line in f:
                 total += float(line)
                 count += 1
-        print(f"{path} -> Average: {total/count}")
+        print(f"{path} -> Average: %.2f" % (total/count))

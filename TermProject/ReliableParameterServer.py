@@ -18,7 +18,7 @@ AGGREGATED_OUTPUT_FILE_PATH = "Output/aggregated_accuracies.txt"
 OUTPUT_FILE_PATH = "Output/without_aggregated_accuracies.txt"
 EPOCH = 5
 LAST_TRAINING_ROUND = 40
-WEIGHT_AVERAGING = False
+WEIGHT_AVERAGING = True
 
 class RPSEventTypes(Enum):
     MST_CONSTRUCTED = "minimumspanningtreeconstructed"
