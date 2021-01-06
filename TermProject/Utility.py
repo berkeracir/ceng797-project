@@ -14,7 +14,7 @@ activatedCurrentNodeColor = '#008000'
 deactivatedCurrentNodeColor = '#800000'
 
 
-def drawGraph(G: nx.Graph, currentNode=-1, neighbors={}, isTopologyGraph=False, showTopology=False, saveFigures=False):
+def drawGraph(G: nx.Graph, currentNode=-1, neighbors={}, isTopologyGraph=False, showTopology=False, saveFigures=True):
     global topologyGraph
     global saveIndex, saveName
     global activatedNodeColor, deactivatedNodeColor, activatedCurrentNodeColor, deactivatedCurrentNodeColor
