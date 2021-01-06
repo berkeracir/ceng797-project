@@ -11,8 +11,13 @@ class NodeChannel(Channel):
 
     def on_message_from_top(self, eventobj: Event):
         header = eventobj.eventcontent.header
-        if header.nexthop == MessageDestinationIdentifiers.LINKLAYERBROADCAST \
-                or header.nexthop in self.connectedNodeIds or header.messageto in self.connectedNodeIds:
+        if header.nexthop == MessageDestinationIdentifiers.LINKLAYERBROADCAST:
+            myevent = Event(eventobj.eventsource, ChannelEventTypes.INCH, eventobj.eventcontent)
+            self.channelqueue.put_nowait(myevent)
+        elif header.nexthop in self.connectedNodeIds:
+            myevent = Event(eventobj.eventsource, ChannelEventTypes.INCH, eventobj.eventcontent)
+            self.channelqueue.put_nowait(myevent)
+        elif header.messageto != header.messagefrom and header.messageto in self.connectedNodeIds:
             myevent = Event(eventobj.eventsource, ChannelEventTypes.INCH, eventobj.eventcontent)
             self.channelqueue.put_nowait(myevent)
 
@@ -26,7 +31,7 @@ class NodeChannel(Channel):
         else:
             if isinstance(eventobj.eventcontent, MSTMessage) \
                     and eventobj.eventcontent.header.messagetype == MSTMessageTypes.LOCAL_MST:
-                time.sleep(1)
+                time.sleep(0.25)
             myevent = Event(eventobj.eventsource, ChannelEventTypes.DLVR, eventobj.eventcontent)
             self.outputqueue.put_nowait(myevent)
 

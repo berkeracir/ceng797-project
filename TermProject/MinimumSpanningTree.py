@@ -78,7 +78,7 @@ class MSTComponent(ComponentModel):
         self.send_down(mstEvent)
 
     def on_message_from_top(self, eventobj: Event):
-        pass
+        self.send_down(eventobj)
 
     def on_message_from_peer(self, eventobj: Event):
         pass
@@ -92,10 +92,13 @@ class MSTComponent(ComponentModel):
                                   eventobj.fromchannel)
             self.send_self(neighborEvent)
         elif messageType is MSTMessageTypes.LOCAL_MST:
-            neighborEvent = Event(eventobj.eventsource, MSTEventTypes.LMST, eventobj.eventcontent, eventobj.fromchannel)
-            self.send_self(neighborEvent)
+            lmstEvent = Event(eventobj.eventsource, MSTEventTypes.LMST, eventobj.eventcontent, eventobj.fromchannel)
+            self.send_self(lmstEvent)
         else:
-            pass
+            if messageType.value == "start":
+                mst = eventobj.eventcontent.payload.messagepayload
+                self.localMST = deepcopy(mst)
+            self.send_up(eventobj)
 
     def on_message_from_neighbor(self, eventobj: Event):
         linkMessageHeader = eventobj.eventcontent.header
@@ -222,36 +225,63 @@ class MSTComponent(ComponentModel):
                 nextActivation = selectDeactivatedNode(S, currentNode, self.neighbors)
                 if nextActivation == -1:
                     print(f"Minimum Spanning Tree is constructed.")
+                    self.startRPS()
 
-                if nextActivation in self.neighbors:
-                    localMSTEventContent = MSTMessage(currentNode, nextActivation, MSTMessageTypes.LOCAL_MST,
-                                                      messagepayload=self.latestActivationLMSTUpdate)
-                    localMSTEvent = Event(self, EventTypes.MFRT, localMSTEventContent)
-                    self.send_down(localMSTEvent)
-                    nextActivation = -1
+                # if nextActivation in self.neighbors:
+                #     localMSTEventContent = MSTMessage(currentNode, nextActivation, MSTMessageTypes.LOCAL_MST,
+                #                                       messagepayload=self.latestActivationLMSTUpdate)
+                #     localMSTEvent = Event(self, EventTypes.MFRT, localMSTEventContent)
+                #     self.send_down(localMSTEvent)
+                #     nextActivation = -1
+                # if nextActivation in S.neighbors(currentNode):
+                #     localMSTEventContent = MSTMessage(currentNode, nextActivation, MSTMessageTypes.LOCAL_MST,
+                #                                       messagepayload=self.latestActivationLMSTUpdate)
+                #     localMSTEvent = Event(self, EventTypes.MFRT, localMSTEventContent)
+                #     self.send_down(localMSTEvent)
+                #     nextActivation = -1
 
                 for node in S.neighbors(currentNode):
                     if S.nodes[node]['activated']:
                         localMSTEventContent = MSTMessage(currentNode, node, MSTMessageTypes.LOCAL_MST,
-                                                          messagepayload=self.latestLocalLMSTUpdate,
-                                                          nextActivationNode=nextActivation)
+                                                          messagepayload=self.latestLocalLMSTUpdate)
                         localMSTEvent = Event(self, EventTypes.MFRT, localMSTEventContent)
                         self.send_down(localMSTEvent)
-            else:
-                if nextActivationNode in self.neighbors:
-                    localMSTEventContent = MSTMessage(currentNode, nextActivationNode, MSTMessageTypes.LOCAL_MST,
-                                                      messagepayload=self.latestActivationLMSTUpdate)
+
+                if nextActivation != -1:
+                    path = getPathInMST(self.localMST, currentNode, nextActivation)
+                    localMSTEventContent = MSTMessage(currentNode, path[1], MSTMessageTypes.LOCAL_MST,
+                                                      messagepayload=self.latestActivationLMSTUpdate,
+                                                      nextActivationNode=nextActivation)
                     localMSTEvent = Event(self, EventTypes.MFRT, localMSTEventContent)
                     self.send_down(localMSTEvent)
-                    nextActivationNode = -1
+            else:
+                # if nextActivationNode in self.neighbors:
+                #     localMSTEventContent = MSTMessage(currentNode, nextActivationNode, MSTMessageTypes.LOCAL_MST,
+                #                                       messagepayload=self.latestActivationLMSTUpdate)
+                #     localMSTEvent = Event(self, EventTypes.MFRT, localMSTEventContent)
+                #     self.send_down(localMSTEvent)
+                #     nextActivationNode = -1
+                # if nextActivationNode in S.neighbors(currentNode):
+                #     localMSTEventContent = MSTMessage(currentNode, nextActivationNode, MSTMessageTypes.LOCAL_MST,
+                #                                       messagepayload=self.latestActivationLMSTUpdate)
+                #     localMSTEvent = Event(self, EventTypes.MFRT, localMSTEventContent)
+                #     self.send_down(localMSTEvent)
+                #     nextActivationNode = -1
 
                 for node in S.neighbors(currentNode):
                     if S.nodes[node]['activated'] and node is not messagefrom:
                         localMSTEventContent = MSTMessage(currentNode, node, MSTMessageTypes.LOCAL_MST,
-                                                          messagepayload=self.latestForwardingLMSTUpdate,
-                                                          nextActivationNode=nextActivationNode)
+                                                          messagepayload=self.latestForwardingLMSTUpdate)
                         localMSTEvent = Event(self, EventTypes.MFRT, localMSTEventContent)
                         self.send_down(localMSTEvent)
+
+                if nextActivationNode != -1:
+                    path = getPathInMST(self.localMST, currentNode, nextActivationNode, messagefrom)
+                    localMSTEventContent = MSTMessage(currentNode, path[1], MSTMessageTypes.LOCAL_MST,
+                                                      messagepayload=self.latestActivationLMSTUpdate,
+                                                      nextActivationNode=nextActivationNode)
+                    localMSTEvent = Event(self, EventTypes.MFRT, localMSTEventContent)
+                    self.send_down(localMSTEvent)
         else:
             if decideNextActivation:
                 drawGraph(S, currentNode, self.neighbors, showTopology=True)
@@ -309,6 +339,14 @@ class MSTComponent(ComponentModel):
                                                       nextActivationNode=nextActivationNode)
                     localMSTEvent = Event(self, EventTypes.MFRT, localMSTEventContent)
                     self.send_down(localMSTEvent)
+
+    def startRPS(self):
+        print(f"Model Training will be started.")
+        lmstUpdate = LMSTUpdate(self.localMST, isCompressed=False)
+        lmstEventContent = MSTMessage(self.componentinstancenumber, self.componentinstancenumber,
+                                      MSTMessageTypes.LOCAL_MST, messagepayload=lmstUpdate)
+        lmstEvent = Event(self, EventTypes.MFRB, lmstEventContent)
+        self.send_up(lmstEvent)
 
     def __init__(self, componentid):
         componentname = "MSTComponent"

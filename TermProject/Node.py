@@ -17,16 +17,16 @@ class Node(ComponentModel):
 
     def __init__(self, componentname, componentid):
         # Subcomponents
-        # self.RPSComponent = RPSComponent(componentid)
+        self.RPSComponent = RPSComponent(componentid)
         # self.NetworkComponent = NetworkComponent(componentid)
         self.MSTComponent = MSTComponent(componentid)
         self.LinkComponent = LinkComponent(componentid)
 
         # Connect the subcomponents to each other
         # self.RPSComponent.connect_me_to_component(ConnectorTypes.DOWN, self.NetworkComponent)
-        # self.RPSComponent.connect_me_to_component(ConnectorTypes.DOWN, self.MSTComponent)
+        self.RPSComponent.connect_me_to_component(ConnectorTypes.DOWN, self.MSTComponent)
 
-        # self.MSTComponent.connect_me_to_component(ConnectorTypes.UP, self.RPSComponent)
+        self.MSTComponent.connect_me_to_component(ConnectorTypes.UP, self.RPSComponent)
         # self.NetworkComponent.connect_me_to_component(ConnectorTypes.UP, self.RPSComponent)
 
         # self.MSTComponent.connect_me_to_component(ConnectorTypes.PEER, self.NetworkComponent)

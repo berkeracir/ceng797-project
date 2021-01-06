@@ -1,6 +1,9 @@
 import networkx as nx
 import matplotlib.pyplot as plt
 
+from sys import setrecursionlimit
+setrecursionlimit(5000)
+
 topologyGraph = None
 saveIndex = 0
 saveName = "Figures/figure_X.png"
@@ -67,7 +70,8 @@ def drawGraph(G: nx.Graph, currentNode=-1, neighbors={}, isTopologyGraph=False, 
                         if not G.has_edge(currentNode, n):
                             edgesToDraw.append((currentNode, n))
                             weightsToDraw[(currentNode, n)] = w
-                    # nx.draw_networkx_edges(G, pos, edgelist=edgesToDraw, style='dotted', alpha=1)
+                    if not showTopology:
+                        nx.draw_networkx_edges(G, pos, edgelist=edgesToDraw, style='dotted')
                     nx.draw_networkx_edge_labels(G, pos, edge_labels=weightsToDraw)
 
         plt.draw()
@@ -125,11 +129,11 @@ def selectDeactivatedNode(S: nx.Graph, currentNode: int, neighbors):
             hopCount = len(path) - 1
             deactivatedNodes.append((node, pathCost, hopCount))
 
-            if node in neighbors:
-                path = [currentNode, node]
-                pathCost = neighbors[node]
-                hopCount = 1
-                deactivatedNodes.append((node, pathCost, hopCount))
+            # if node in neighbors:
+            #     path = [currentNode, node]
+            #     pathCost = neighbors[node]
+            #     hopCount = 1
+            #     deactivatedNodes.append((node, pathCost, hopCount))
     deactivatedNodes.sort(key=lambda r: (r[1], r[2]))
 
     if len(deactivatedNodes) > 0:

@@ -10,25 +10,26 @@ from Node import Node
 from Utility import drawGraph, getPathInMST
 
 
-class commands(Enum):   # TODO
-    NEIGHBORS = "n"     # "neighbors"
-    MST = "m"           # "mst"
-    SHOW = "s"          # "show"
-    HELP = "help"       # "help"
+class commands(Enum):
+    NEIGHBORS = "neighbor"      # "neighbors"
+    MST = "mst"                 # "mst"
+    SHOW = "show"               # "show"
+    HELP = "help"               # "help"
 
-class arguments(Enum):  # TODO
+class arguments(Enum):
     # NEIGHBORS
-    WEIGHTS = "-w"      # "-weights"
-    ALL = "-a"          # "-all"
+    WEIGHTS = "-weights"        # "-weights"
+    ALL = "-all"                # "-all"
     # MST
-    START = "-s"        # "-start"
-    RANDOM = "-r"       # "-random"
-    MANUAL = "-m"       # "-manuel"
-    CONTINUE = "-c"     # "-continue"
+    START = "-start"            # "-start"
+    RANDOM = "-random"          # "-random"
+    MANUAL = "-manual"          # "-manual"
+    CONTINUE = "-continue"      # "-continue"
     # SHOW
-    NETWORK = "-n"      # "-network"
-    LMST = "-l"         # "-localmst"
-    LMST_PATH = "-p"    # "-path"
+    NETWORK = "-network"        # "-network"
+    LMST = "-localmst"          # "-localmst"
+    LMST_PATH = "-path"         # "-path"
+    ACCURACY = "-accuracy"      # "-accuracy"
 
 lastLocalMSTUpdatedNode = -1
 localMSTManualMode = False
@@ -52,9 +53,11 @@ def helpUserCommand(cmd: commands):
         print(f"Show Network Topology:\n"
               f"\t\"{commands.SHOW.value} {arguments.NETWORK.value}\"")
         print(f"Show Local MinimumSpanningTree:\n"
-              f"\t\"{commands.SHOW.value} {arguments.LMST.value}\" nodeId")
+              f"\t\"{commands.SHOW.value} {arguments.LMST.value} nodeId\"")
         print(f"Show Path in Local MinimumSpanningTree:\n"
-              f"\t\"{commands.SHOW.value} {arguments.LMST_PATH.value}\" sourceNodeId destinationNodeId")
+              f"\t\"{commands.SHOW.value} {arguments.LMST_PATH.value} sourceNodeId destinationNodeId\"")
+        print(f"Show Best Model's Accuracy:\n"
+              f"\t\"{commands.SHOW.value} {arguments.ACCURACY.value} nodeId\"")
     elif cmd is commands.HELP:
         helpUserCommand(commands.NEIGHBORS)
         helpUserCommand(commands.MST)
@@ -250,6 +253,25 @@ def showCommand(args: arguments, topology: Topology):
                   f"{getPathInMST(localMST, sourceNodeId, destinationNodeId)}")
         else:
             helpUserCommand(commands.SHOW)
+    elif arguments.ACCURACY.value in args:
+        args.remove(arguments.ACCURACY.value)
+
+        if len(args) == 1:
+            try:
+                nodeId = int(args[0])
+                node = topology.nodes[nodeId]
+            except KeyError:
+                print(f"Node {nodeId} does not exist in the topology.")
+                return
+            except ValueError:
+                print(f"\'{args[0]}\' is not integer.")
+                return
+            rpsComponent = node.RPSComponent
+            accuracy = rpsComponent.bestModelInfo['bestModelAccuracy']
+            trainingRound = rpsComponent.bestModelInfo['bestModelTrainingRound']
+            print(f"Node {nodeId}'s best accuracy is {accuracy} which is obtained in training round {trainingRound}.")
+        else:
+            helpUserCommand(commands.SHOW)
     else:
         helpUserCommand(commands.SHOW)
 
@@ -269,15 +291,18 @@ def processUserCommand(userInput: str, topology: Topology):
     elif cmd == commands.HELP.value:
         helpUserCommand(commands.HELP)
     else:
-        argsToString = " ".join(args)
         print(f"Unknown input: \'{userInput}\'")
 
 def main():
     # G: nx.Graph= nx.random_geometric_graph(5, 0.5, seed=3)
     G: nx.Graph = nx.random_geometric_graph(14, 0.4, seed=1)
     # G: nx.Graph = nx.random_geometric_graph(15, 0.4, seed=3)
+    # G: nx.Graph = nx.random_geometric_graph(20, 0.4, seed=3)
+    # G: nx.Graph = nx.random_geometric_graph(10, 0.5, seed=3)
+    # G: nx.Graph = nx.random_geometric_graph(30, 0.35, seed=3)
+    # G: nx.Graph = nx.random_geometric_graph(6, 0.6, seed=3)
     for (u, v) in G.edges:
-        G.get_edge_data(u, v)['weight'] = u + v + u * v # random.randint(1, len(G.nodes))   # u + v + u * v # TODO
+        G.get_edge_data(u, v)['weight'] = random.randint(1, len(G.nodes))   # u + v + u * v # TODO
 
     topo = Topology()
     topo.construct_from_graph(G, Node, NodeChannel)
@@ -288,7 +313,6 @@ def main():
     while True:
         userInput = input("\nUser Command:\n")
         processUserCommand(userInput, topo)
-        time.sleep(1)
 
 if __name__ == "__main__":
     main()
