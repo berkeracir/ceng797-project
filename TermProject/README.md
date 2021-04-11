@@ -18,3 +18,5 @@ conda install scipy numpy matplotlib pandas statsmodels scikit-learn
 conda install theano
 conda install -c conda-forge tensorflow
 pip install keras
+
+# AHC Component: https://github.com/cengwins/ahc
